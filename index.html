@@ -1367,14 +1367,20 @@
 
         // Render functions
         function updateDashboard() {
-            const wellsDown = workovers.filter(w => w.status === 'down' || w.status === 'pending').length;
-            const activeWorkovers = workovers.filter(w => w.status === 'active' || w.status === 'in_progress').length;
+            const wellsDown = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'down' || status === 'pending';
+            }).length;
+            const activeWorkovers = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'active' || status === 'in_progress' || status === 'in progress';
+            }).length;
             const now = new Date();
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const completedThisMonth = workovers.filter(w =>
-                (w.status === 'completed') &&
-                w.end_date && new Date(w.end_date) >= startOfMonth
-            ).length;
+            const completedThisMonth = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'completed' && w.end_date && new Date(w.end_date) >= startOfMonth;
+            }).length;
             const availableRigs = rigs.filter(r => r.status === 'Available' || r.status === 'available' || !r.status).length;
 
             document.getElementById('statWellsDown').textContent = wellsDown;
@@ -1385,7 +1391,10 @@
             // Update badges
             document.getElementById('wellsDownBadge').textContent = wellsDown;
             document.getElementById('activeBadge').textContent = activeWorkovers;
-            document.getElementById('completedBadge').textContent = workovers.filter(w => w.status === 'completed').length;
+            document.getElementById('completedBadge').textContent = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'completed';
+            }).length;
 
             // Render recent activity
             renderRecentActivity();
@@ -1393,7 +1402,13 @@
 
         function renderRecentActivity() {
             const tbody = document.getElementById('recentActivityTable');
-            const recent = [...workovers]
+            // Show only active workovers
+            const activeWorkovers = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'active' || status === 'in_progress' || status === 'in progress';
+            });
+
+            const recent = [...activeWorkovers]
                 .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
                 .slice(0, 10);
 
@@ -1402,7 +1417,7 @@
                     <tr>
                         <td colspan="5" class="empty-state">
                             <div class="empty-state-icon">📋</div>
-                            <p>No workovers yet. Click "+ New Workover" to get started.</p>
+                            <p>No active workovers. Click "+ New Workover" to get started.</p>
                         </td>
                     </tr>
                 `;
@@ -1410,16 +1425,15 @@
             }
 
             tbody.innerHTML = recent.map(w => {
-                const rig = rigs.find(r => r.id === w.rig_id);
+                const rigName = w.rig || '-';
                 const days = calculateDays(w.start_date || w.down_date || w.created_at);
-                const statusClass = w.status === 'completed' ? 'completed' :
-                                   (w.status === 'active' || w.status === 'in_progress') ? 'active' : 'down';
+                const statusClass = 'active';
 
                 return `
                     <tr>
                         <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
                         <td><span class="status-badge ${statusClass}">${formatStatus(w.status)}</span></td>
-                        <td>${rig ? escapeHtml(rig.name) : '-'}</td>
+                        <td>${escapeHtml(rigName)}</td>
                         <td><span class="days-counter ${days > 7 ? 'critical' : days > 3 ? 'warning' : ''}">${days} days</span></td>
                         <td>${formatDate(w.updated_at || w.created_at)}</td>
                     </tr>
@@ -1429,7 +1443,10 @@
 
         function renderWorkoverTables() {
             // Wells Down
-            const wellsDown = workovers.filter(w => w.status === 'down' || w.status === 'pending');
+            const wellsDown = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'down' || status === 'pending';
+            });
             const wellsDownTbody = document.getElementById('wellsDownTable');
 
             if (wellsDown.length === 0) {
@@ -1460,7 +1477,10 @@
             }
 
             // Active Workovers
-            const activeWorkovers = workovers.filter(w => w.status === 'active' || w.status === 'in_progress');
+            const activeWorkovers = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'active' || status === 'in_progress' || status === 'in progress';
+            });
             const activeTbody = document.getElementById('activeWorkoversTable');
 
             if (activeWorkovers.length === 0) {
@@ -1474,14 +1494,14 @@
                 `;
             } else {
                 activeTbody.innerHTML = activeWorkovers.map(w => {
-                    const rig = rigs.find(r => r.id === w.rig_id);
+                    const rigName = w.rig || '-';
                     const days = calculateDays(w.start_date || w.created_at);
                     return `
                         <tr>
                             <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
-                            <td>${rig ? escapeHtml(rig.name) : '-'}</td>
+                            <td>${escapeHtml(rigName)}</td>
                             <td>${formatDate(w.start_date || w.created_at)}</td>
-                            <td><span class="days-counter ${days > 7 ? 'critical' : days > 3 ? 'warning' : ''}">${days}</span></td>
+                            <td><span class="days-counter ${days > 7 ? 'critical' : days > 3 ? 'warning' : ''}">${days} days</span></td>
                             <td>${escapeHtml(w.work_type || '-')}</td>
                             <td class="action-buttons">
                                 <button class="btn btn-success btn-sm" onclick="openCompleteModal(${w.id})">Complete</button>
@@ -1492,7 +1512,10 @@
             }
 
             // Completed Workovers
-            const completed = workovers.filter(w => w.status === 'completed');
+            const completed = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'completed';
+            });
             const completedTbody = document.getElementById('completedWorkoversTable');
 
             if (completed.length === 0) {
@@ -1506,13 +1529,13 @@
                 `;
             } else {
                 completedTbody.innerHTML = completed.map(w => {
-                    const rig = rigs.find(r => r.id === w.rig_id);
+                    const rigName = w.rig || '-';
                     const duration = w.start_date && w.end_date ?
                         calculateDays(w.start_date, w.end_date) : '-';
                     return `
                         <tr>
                             <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
-                            <td>${rig ? escapeHtml(rig.name) : '-'}</td>
+                            <td>${escapeHtml(rigName)}</td>
                             <td>${formatDate(w.start_date)}</td>
                             <td>${formatDate(w.end_date)}</td>
                             <td>${duration} days</td>
