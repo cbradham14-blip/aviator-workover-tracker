@@ -5,8 +5,8 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "methods": ["get"],
-      "route": "wells-down"
+      "methods": ["get", "post", "patch", "delete"],
+      "route": "wells-down/{id?}"
     },
     {
       "type": "http",

@@ -785,6 +785,16 @@
                         <div class="stat-value" id="statAvailableRigs">-</div>
                         <div class="stat-subtitle">Ready for assignment</div>
                     </div>
+                    <div class="stat-card danger">
+                        <div class="stat-label">Production Down</div>
+                        <div class="stat-value" id="statProductionDown">-</div>
+                        <div class="stat-subtitle">Deferred BOPD</div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="stat-label">Revenue Down</div>
+                        <div class="stat-value" id="statRevenueDown">-</div>
+                        <div class="stat-subtitle">Estimated per day</div>
+                    </div>
                 </div>
 
                 <div class="card">
@@ -830,14 +840,14 @@
                                 <thead>
                                     <tr>
                                         <th>Well Name</th>
-                                        <th>Status</th>
-                                        <th>Last Production</th>
-                                        <th>Downtime (Hrs)</th>
-                                        <th>Downtime (Days)</th>
+                                        <th>Lease</th>
+                                        <th>Route</th>
+                                        <th>BOPD</th>
+                                        <th>Days Down</th>
+                                        <th>Production Down</th>
                                         <th>Reason</th>
-                                        <th>Def Oil (BBL)</th>
-                                        <th>Def Gas (MCF)</th>
-                                        <th>Def Water (BBL)</th>
+                                        <th>Cost Est</th>
+                                        <th>Comments</th>
                                     </tr>
                                 </thead>
                                 <tbody id="wellsDownTable">
@@ -1406,18 +1416,19 @@
                 `;
             } else {
                 tbody.innerHTML = wellsDown.map(w => {
-                    const downtimeDays = (w.downtime_hours / 24).toFixed(1);
+                    const daysDown = w.days_offline || 0;
+                    const prodDown = w.production_down || (daysDown * (w.def_bopd || 0));
                     return `
                         <tr>
                             <td><strong>${escapeHtml(w.well)}</strong></td>
-                            <td>${escapeHtml(w.status || 'Down')}</td>
-                            <td>${formatDate(w.last_date)}</td>
-                            <td><span class="days-counter ${w.downtime_hours > 168 ? 'critical' : w.downtime_hours > 72 ? 'warning' : ''}">${w.downtime_hours.toFixed(0)} hrs</span></td>
-                            <td><span class="days-counter ${w.downtime_hours > 168 ? 'critical' : w.downtime_hours > 72 ? 'warning' : ''}">${downtimeDays} days</span></td>
-                            <td>${escapeHtml(w.reason_down || '-')}</td>
-                            <td>${w.deferred_oil ? w.deferred_oil.toFixed(2) : '0.00'}</td>
-                            <td>${w.deferred_gas ? w.deferred_gas.toFixed(2) : '0.00'}</td>
-                            <td>${w.deferred_water ? w.deferred_water.toFixed(2) : '0.00'}</td>
+                            <td>${escapeHtml(w.lease || '-')}</td>
+                            <td>${escapeHtml(w.route || '-')}</td>
+                            <td>${(w.def_bopd || 0).toFixed(2)}</td>
+                            <td><span class="days-counter ${daysDown > 7 ? 'critical' : daysDown > 3 ? 'warning' : ''}">${daysDown}</span></td>
+                            <td><strong>${prodDown.toFixed(1)} BBL</strong></td>
+                            <td>${escapeHtml(w.reason || '-')}</td>
+                            <td>${w.cost_est_pre_wo ? '$' + w.cost_est_pre_wo.toLocaleString() : '-'}</td>
+                            <td>${escapeHtml(w.comments || '-')}</td>
                         </tr>
                     `;
                 }).join('');
@@ -1429,7 +1440,7 @@
         }
 
         // Render functions
-        function updateDashboard() {
+        async function updateDashboard() {
             const wellsDown = workovers.filter(w => {
                 const status = (w.status || '').toLowerCase();
                 return status === 'down' || status === 'pending';
@@ -1446,10 +1457,28 @@
             }).length;
             const availableRigs = rigs.filter(r => r.status === 'Available' || r.status === 'available' || !r.status).length;
 
+            // Calculate production down and revenue down
+            let productionDown = 0;
+            let revenueDown = 0;
+            const oilPrice = 70; // $/bbl - can be made configurable later
+
+            try {
+                const response = await fetch(`${API_BASE}/wells-down`);
+                if (response.ok) {
+                    const wellsDownData = await response.json();
+                    productionDown = wellsDownData.reduce((sum, w) => sum + (w.def_bopd || 0), 0);
+                    revenueDown = productionDown * oilPrice;
+                }
+            } catch (error) {
+                console.error('Error loading wells down data:', error);
+            }
+
             document.getElementById('statWellsDown').textContent = wellsDown;
             document.getElementById('statActiveWorkovers').textContent = activeWorkovers;
             document.getElementById('statCompletedMonth').textContent = completedThisMonth;
             document.getElementById('statAvailableRigs').textContent = availableRigs;
+            document.getElementById('statProductionDown').textContent = productionDown.toFixed(1) + ' BOPD';
+            document.getElementById('statRevenueDown').textContent = '$' + revenueDown.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
             // Update badges
             document.getElementById('wellsDownBadge').textContent = wellsDown;
