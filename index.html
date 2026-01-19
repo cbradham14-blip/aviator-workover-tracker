@@ -1937,7 +1937,7 @@
             }
 
             try {
-                // Create workover with completed status
+                // Create workover with completed status and custom dates
                 const response = await fetch(`${API_BASE}/workovers`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1947,6 +1947,9 @@
                         reason: reason,
                         type: workType,
                         status: 'Completed',
+                        startDate: startDate,
+                        endDate: endDate,
+                        cost: cost ? parseFloat(cost) : null,
                         estCost: cost ? parseFloat(cost) : null,
                         notes: notes,
                         createdBy: 'system'
@@ -1954,19 +1957,6 @@
                 });
 
                 if (!response.ok) throw new Error('Failed to create workover');
-
-                const newWorkover = await response.json();
-
-                // Update the workover to set start_date, end_date, and final_cost
-                await fetch(`${API_BASE}/workovers/${newWorkover.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        status: 'Completed',
-                        cost: cost ? parseFloat(cost) : null,
-                        notes: notes
-                    })
-                });
 
                 showToast('Completed workover added', 'success');
                 closeModal('quickAddCompletedModal');
