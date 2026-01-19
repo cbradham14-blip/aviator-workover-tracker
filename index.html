@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviator Workover Tracker</title>
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js-sha256.min.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js-sha256.min.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js-sha256.min.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a365d;
+            --primary-light: #2c5282;
+            --accent: #ed8936;
+            --success: #38a169;
+            --warning: #d69e2e;
+            --danger: #e53e3e;
+            --gray-50: #f7fafc;
+            --gray-100: #edf2f7;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e0;
+            --gray-600: #718096;
+            --gray-700: #4a5568;
+            --gray-800: #2d3748;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--gray-100);
+            min-height: 100vh;
+        }
+
+        /* Login Screen */
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        .login-card {
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            color: var(--gray-600);
+            margin-bottom: 2rem;
+        }
+
+        .login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .login-btn:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26,54,93,0.3);
+        }
+
+        .login-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .login-error {
+            background: #fed7d7;
+            color: var(--danger);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        /* Main App */
+        .app-container {
+            display: none;
+        }
+
+        /* Header */
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .status-dot.disconnected {
+            background: var(--danger);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0 2rem;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 1rem 1.5rem;
+            border: none;
+            background: none;
+            color: var(--gray-600);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            color: var(--primary);
+            background: var(--gray-50);
+        }
+
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--accent);
+        }
+
+        .nav-tab .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            background: var(--danger);
+            color: white;
+            border-radius: 11px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .nav-tab .badge.warning {
+            background: var(--warning);
+        }
+
+        .nav-tab .badge.success {
+            background: var(--success);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .stat-card.danger {
+            border-left: 4px solid var(--danger);
+        }
+
+        .stat-card.warning {
+            border-left: 4px solid var(--warning);
+        }
+
+        .stat-card.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .stat-card.primary {
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .stat-subtitle {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        th {
+            background: var(--gray-50);
+            font-weight: 600;
+            color: var(--gray-700);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background: var(--gray-50);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-badge.down {
+            background: #fed7d7;
+            color: var(--danger);
+        }
+
+        .status-badge.active {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-badge.completed {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-badge.available {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-badge.assigned {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #2f855a;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26,54,93,0.1);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray-600);
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 14px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        .toast.warning {
+            background: var(--warning);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray-600);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .nav-tabs {
+                padding: 0 1rem;
+            }
+
+            .nav-tab {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .user-name {
+                display: none;
+            }
+        }
+
+        /* Workover Details */
+        .workover-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .workover-details .form-group {
+            margin-bottom: 0;
+        }
+
+        .workover-details .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        /* Days Counter */
+        .days-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .days-counter.critical {
+            color: var(--danger);
+        }
+
+        .days-counter.warning {
+            color: var(--warning);
+        }
+
+        /* Production Chart Placeholder */
+        .chart-placeholder {
+            background: var(--gray-100);
+            border-radius: 8px;
+            padding: 3rem;
+            text-align: center;
+            color: var(--gray-600);
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar .form-control {
+            width: auto;
+            min-width: 200px;
+        }
+
+        /* Action Buttons in Table */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-card">
+            <div class="login-logo">Aviator Energy</div>
+            <div class="login-subtitle">Workover Tracker</div>
+            <button class="login-btn" onclick="signIn()">
+                <svg viewBox="0 0 21 21" fill="currentColor">
+                    <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                    <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                </svg>
+                Sign in with Microsoft
+            </button>
+            <div class="login-error" id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div class="app-container" id="appContainer">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">Aviator Workover Tracker</div>
+                <div class="connection-status">
+                    <span class="status-dot" id="connectionDot"></span>
+                    <span id="connectionText">Connected</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">?</div>
+                    <span class="user-name" id="userName">User</span>
+                </div>
+                <button class="logout-btn" onclick="signOut()">Sign Out</button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+            <button class="nav-tab" data-tab="wellsDown">
+                Wells Down
+                <span class="badge" id="wellsDownBadge">0</span>
+            </button>
+            <button class="nav-tab" data-tab="activeWorkovers">
+                Active Workovers
+                <span class="badge warning" id="activeBadge">0</span>
+            </button>
+            <button class="nav-tab" data-tab="completedWorkovers">
+                Completed
+                <span class="badge success" id="completedBadge">0</span>
+            </button>
+            <button class="nav-tab" data-tab="rigs">Rigs</button>
+            <button class="nav-tab" data-tab="production">Production</button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <div class="tab-content active" id="dashboard">
+                <div class="dashboard-grid">
+                    <div class="stat-card danger">
+                        <div class="stat-label">Wells Currently Down</div>
+                        <div class="stat-value" id="statWellsDown">-</div>
+                        <div class="stat-subtitle">Awaiting workover</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-label">Active Workovers</div>
+                        <div class="stat-value" id="statActiveWorkovers">-</div>
+                        <div class="stat-subtitle">In progress</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">Completed This Month</div>
+                        <div class="stat-value" id="statCompletedMonth">-</div>
+                        <div class="stat-subtitle">Workovers finished</div>
+                    </div>
+                    <div class="stat-card primary">
+                        <div class="stat-label">Available Rigs</div>
+                        <div class="stat-value" id="statAvailableRigs">-</div>
+                        <div class="stat-subtitle">Ready for assignment</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Recent Activity</h2>
+                        <button class="btn btn-primary btn-sm" onclick="openNewWorkoverModal()">+ New Workover</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Well</th>
+                                        <th>Status</th>
+                                        <th>Rig</th>
+                                        <th>Days</th>
+                                        <th>Last Update</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentActivityTable">
+                                    <tr>
+                                        <td colspan="5" class="loading">
+                                            <div class="spinner"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wells Down Tab -->
+            <div class="tab-content" id="wellsDown">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Wells Currently Down</h2>
+                        <button class="btn btn-primary btn-sm" onclick="openNewWorkoverModal()">+ New Workover</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Well Name</th>
+                                        <th>Lease</th>
+                                        <th>Down Date</th>
+                                        <th>Days Down</th>
+                                        <th>Reason</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wellsDownTable">
+                                    <tr>
+                                        <td colspan="6" class="loading">
+                                            <div class="spinner"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Workovers Tab -->
+            <div class="tab-content" id="activeWorkovers">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Active Workovers</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Well Name</th>
+                                        <th>Rig</th>
+                                        <th>Start Date</th>
+                                        <th>Days Active</th>
+                                        <th>Work Type</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activeWorkoversTable">
+                                    <tr>
+                                        <td colspan="6" class="loading">
+                                            <div class="spinner"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completed Workovers Tab -->
+            <div class="tab-content" id="completedWorkovers">
+                <div class="filter-bar">
+                    <select class="form-control" id="completedMonthFilter" onchange="loadCompletedWorkovers()">
+                        <option value="">All Time</option>
+                        <option value="1">Last 30 Days</option>
+                        <option value="3">Last 90 Days</option>
+                        <option value="6">Last 6 Months</option>
+                        <option value="12">Last Year</option>
+                    </select>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Completed Workovers</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Well Name</th>
+                                        <th>Rig</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Duration</th>
+                                        <th>Work Type</th>
+                                        <th>Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="completedWorkoversTable">
+                                    <tr>
+                                        <td colspan="7" class="loading">
+                                            <div class="spinner"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rigs Tab -->
+            <div class="tab-content" id="rigs">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Rig Fleet</h2>
+                        <button class="btn btn-primary btn-sm" onclick="openNewRigModal()">+ Add Rig</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Rig Name</th>
+                                        <th>Contractor</th>
+                                        <th>Status</th>
+                                        <th>Current Well</th>
+                                        <th>Day Rate</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rigsTable">
+                                    <tr>
+                                        <td colspan="6" class="loading">
+                                            <div class="spinner"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Production Tab -->
+            <div class="tab-content" id="production">
+                <div class="filter-bar">
+                    <input type="text" class="form-control" id="productionWellFilter" placeholder="Filter by well name..." oninput="filterProduction()">
+                    <select class="form-control" id="productionDateFilter" onchange="loadProduction()">
+                        <option value="7">Last 7 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                    </select>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Production Data</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Well Name</th>
+                                        <th>Oil (BBL)</th>
+                                        <th>Gas (MCF)</th>
+                                        <th>Water (BBL)</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productionTable">
+                                    <tr>
+                                        <td colspan="6" class="loading">
+                                            <div class="spinner"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- New Workover Modal -->
+    <div class="modal-overlay" id="newWorkoverModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">New Workover</h3>
+                <button class="modal-close" onclick="closeModal('newWorkoverModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="workover-details">
+                    <div class="form-group">
+                        <label class="form-label">Well Name *</label>
+                        <select class="form-control" id="workoverWellName" required>
+                            <option value="">Select Well</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Or Enter New Well</label>
+                        <input type="text" class="form-control" id="workoverWellNameCustom" placeholder="Type well name if not in list">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rig *</label>
+                        <select class="form-control" id="workoverRig" required>
+                            <option value="">Select Rig</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Work Type</label>
+                        <select class="form-control" id="workoverType">
+                            <option value="Pump Change">Pump Change</option>
+                            <option value="Rod Repair">Rod Repair</option>
+                            <option value="Tubing Repair">Tubing Repair</option>
+                            <option value="Cleanout">Cleanout</option>
+                            <option value="Recompletion">Recompletion</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estimated Cost ($)</label>
+                        <input type="number" class="form-control" id="workoverEstCost" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Actual Cost ($)</label>
+                        <input type="number" class="form-control" id="workoverFinalCost" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Reason for Workover</label>
+                        <textarea class="form-control" id="workoverReason" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('newWorkoverModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createWorkover()">Create Workover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Rig Modal -->
+    <div class="modal-overlay" id="newRigModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Rig</h3>
+                <button class="modal-close" onclick="closeModal('newRigModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Rig Name *</label>
+                    <input type="text" class="form-control" id="rigName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contractor *</label>
+                    <input type="text" class="form-control" id="rigContractor" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Day Rate ($) *</label>
+                    <input type="number" class="form-control" id="rigDayRate" step="0.01" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('newRigModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createRig()">Add Rig</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complete Workover Modal -->
+    <div class="modal-overlay" id="completeWorkoverModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Complete Workover</h3>
+                <button class="modal-close" onclick="closeModal('completeWorkoverModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem;">Mark this workover as completed?</p>
+                <div class="form-group">
+                    <label class="form-label">Total Cost ($)</label>
+                    <input type="number" class="form-control" id="workoverCost" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Completion Notes</label>
+                    <textarea class="form-control" id="workoverNotes" rows="3"></textarea>
+                </div>
+                <input type="hidden" id="completeWorkoverId">
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('completeWorkoverModal')">Cancel</button>
+                <button class="btn btn-success" onclick="completeWorkover()">Complete Workover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'https://aviator-workover-api.azurewebsites.net/api';
+
+        // MSAL Configuration
+        const msalConfig = {
+            auth: {
+                clientId: 'c4624357-c465-4849-8112-30931976a658',
+                authority: 'https://login.microsoftonline.com/60895329-770e-4a73-ad30-08f842948516',
+                redirectUri: window.location.origin
+            },
+            cache: {
+                cacheLocation: 'sessionStorage',
+                storeAuthStateInCookie: false
+            }
+        };
+
+        const loginRequest = {
+            scopes: ['User.Read']
+        };
+
+        // Initialize MSAL
+        let msalInstance;
+        let currentUser = null;
+
+        // Data stores
+        let rigs = [];
+        let workovers = [];
+        let production = [];
+        let wells = [];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                msalInstance = new msal.PublicClientApplication(msalConfig);
+                await msalInstance.initialize();
+
+                // Handle redirect callback
+                const response = await msalInstance.handleRedirectPromise();
+                if (response) {
+                    handleLoginResponse(response);
+                } else {
+                    // Check if user is already logged in
+                    const accounts = msalInstance.getAllAccounts();
+                    if (accounts.length > 0) {
+                        currentUser = accounts[0];
+                        if (validateDomain(currentUser.username)) {
+                            showApp();
+                        } else {
+                            showLoginError('Access restricted to @aviator-energy.com accounts');
+                            await msalInstance.logout();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('MSAL initialization error:', error);
+                showLoginError('Authentication service unavailable');
+            }
+
+            // Set up tab navigation
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+            });
+        });
+
+        // Authentication functions
+        async function signIn() {
+            try {
+                const response = await msalInstance.loginPopup(loginRequest);
+                handleLoginResponse(response);
+            } catch (error) {
+                console.error('Login error:', error);
+                if (error.errorCode === 'user_cancelled') {
+                    showLoginError('Sign in was cancelled');
+                } else {
+                    showLoginError('Sign in failed. Please try again.');
+                }
+            }
+        }
+
+        function handleLoginResponse(response) {
+            if (response && response.account) {
+                currentUser = response.account;
+                if (validateDomain(currentUser.username)) {
+                    showApp();
+                } else {
+                    showLoginError('Access restricted to @aviator-energy.com accounts');
+                    signOut();
+                }
+            }
+        }
+
+        function validateDomain(email) {
+            return email && email.toLowerCase().endsWith('@aviator-energy.com');
+        }
+
+        async function signOut() {
+            try {
+                await msalInstance.logoutPopup();
+                currentUser = null;
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('appContainer').style.display = 'none';
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        function showLoginError(message) {
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function showApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+
+            // Update user info
+            if (currentUser) {
+                const initials = currentUser.name ?
+                    currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) :
+                    currentUser.username[0].toUpperCase();
+                document.getElementById('userAvatar').textContent = initials;
+                document.getElementById('userName').textContent = currentUser.name || currentUser.username;
+            }
+
+            // Load initial data
+            loadAllData();
+        }
+
+        // Data loading functions
+        async function loadAllData() {
+            try {
+                await Promise.all([
+                    loadRigs(),
+                    loadWorkovers(),
+                    loadProduction(),
+                    loadWells()
+                ]);
+                updateDashboard();
+                setConnectionStatus(true);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                setConnectionStatus(false);
+                showToast('Failed to load data from server', 'error');
+            }
+        }
+
+        async function loadWells() {
+            try {
+                const response = await fetch(`${API_BASE}/wells`);
+                if (!response.ok) throw new Error('Failed to fetch wells');
+                wells = await response.json();
+                updateWellsDropdown();
+            } catch (error) {
+                console.error('Error loading wells:', error);
+                throw error;
+            }
+        }
+
+        async function loadRigs() {
+            try {
+                const response = await fetch(`${API_BASE}/rigs`);
+                if (!response.ok) throw new Error('Failed to fetch rigs');
+                rigs = await response.json();
+                renderRigsTable();
+                updateRigDropdown();
+            } catch (error) {
+                console.error('Error loading rigs:', error);
+                throw error;
+            }
+        }
+
+        async function loadWorkovers() {
+            try {
+                const response = await fetch(`${API_BASE}/workovers`);
+                if (!response.ok) throw new Error('Failed to fetch workovers');
+                workovers = await response.json();
+                renderWorkoverTables();
+            } catch (error) {
+                console.error('Error loading workovers:', error);
+                throw error;
+            }
+        }
+
+        async function loadProduction() {
+            try {
+                const days = document.getElementById('productionDateFilter')?.value || 30;
+                const response = await fetch(`${API_BASE}/production?days=${days}`);
+                if (!response.ok) throw new Error('Failed to fetch production');
+                production = await response.json();
+                renderProductionTable();
+            } catch (error) {
+                console.error('Error loading production:', error);
+                throw error;
+            }
+        }
+
+        async function loadCompletedWorkovers() {
+            await loadWorkovers();
+        }
+
+        // Render functions
+        function updateDashboard() {
+            const wellsDown = workovers.filter(w => w.status === 'down' || w.status === 'pending').length;
+            const activeWorkovers = workovers.filter(w => w.status === 'active' || w.status === 'in_progress').length;
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const completedThisMonth = workovers.filter(w =>
+                (w.status === 'completed') &&
+                w.end_date && new Date(w.end_date) >= startOfMonth
+            ).length;
+            const availableRigs = rigs.filter(r => r.status === 'Available' || r.status === 'available' || !r.status).length;
+
+            document.getElementById('statWellsDown').textContent = wellsDown;
+            document.getElementById('statActiveWorkovers').textContent = activeWorkovers;
+            document.getElementById('statCompletedMonth').textContent = completedThisMonth;
+            document.getElementById('statAvailableRigs').textContent = availableRigs;
+
+            // Update badges
+            document.getElementById('wellsDownBadge').textContent = wellsDown;
+            document.getElementById('activeBadge').textContent = activeWorkovers;
+            document.getElementById('completedBadge').textContent = workovers.filter(w => w.status === 'completed').length;
+
+            // Render recent activity
+            renderRecentActivity();
+        }
+
+        function renderRecentActivity() {
+            const tbody = document.getElementById('recentActivityTable');
+            const recent = [...workovers]
+                .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
+                .slice(0, 10);
+
+            if (recent.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <p>No workovers yet. Click "+ New Workover" to get started.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = recent.map(w => {
+                const rig = rigs.find(r => r.id === w.rig_id);
+                const days = calculateDays(w.start_date || w.down_date || w.created_at);
+                const statusClass = w.status === 'completed' ? 'completed' :
+                                   (w.status === 'active' || w.status === 'in_progress') ? 'active' : 'down';
+
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
+                        <td><span class="status-badge ${statusClass}">${formatStatus(w.status)}</span></td>
+                        <td>${rig ? escapeHtml(rig.name) : '-'}</td>
+                        <td><span class="days-counter ${days > 7 ? 'critical' : days > 3 ? 'warning' : ''}">${days} days</span></td>
+                        <td>${formatDate(w.updated_at || w.created_at)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderWorkoverTables() {
+            // Wells Down
+            const wellsDown = workovers.filter(w => w.status === 'down' || w.status === 'pending');
+            const wellsDownTbody = document.getElementById('wellsDownTable');
+
+            if (wellsDown.length === 0) {
+                wellsDownTbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-icon">✅</div>
+                            <p>No wells currently down</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                wellsDownTbody.innerHTML = wellsDown.map(w => {
+                    const days = calculateDays(w.down_date || w.created_at);
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
+                            <td>${escapeHtml(w.lease || '-')}</td>
+                            <td>${formatDate(w.down_date || w.created_at)}</td>
+                            <td><span class="days-counter ${days > 7 ? 'critical' : days > 3 ? 'warning' : ''}">${days}</span></td>
+                            <td>${escapeHtml(w.reason || w.work_type || '-')}</td>
+                            <td class="action-buttons">
+                                <button class="btn btn-success btn-sm" onclick="startWorkover(${w.id})">Start</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Active Workovers
+            const activeWorkovers = workovers.filter(w => w.status === 'active' || w.status === 'in_progress');
+            const activeTbody = document.getElementById('activeWorkoversTable');
+
+            if (activeWorkovers.length === 0) {
+                activeTbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-icon">🔧</div>
+                            <p>No active workovers</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                activeTbody.innerHTML = activeWorkovers.map(w => {
+                    const rig = rigs.find(r => r.id === w.rig_id);
+                    const days = calculateDays(w.start_date || w.created_at);
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
+                            <td>${rig ? escapeHtml(rig.name) : '-'}</td>
+                            <td>${formatDate(w.start_date || w.created_at)}</td>
+                            <td><span class="days-counter ${days > 7 ? 'critical' : days > 3 ? 'warning' : ''}">${days}</span></td>
+                            <td>${escapeHtml(w.work_type || '-')}</td>
+                            <td class="action-buttons">
+                                <button class="btn btn-success btn-sm" onclick="openCompleteModal(${w.id})">Complete</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Completed Workovers
+            const completed = workovers.filter(w => w.status === 'completed');
+            const completedTbody = document.getElementById('completedWorkoversTable');
+
+            if (completed.length === 0) {
+                completedTbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <p>No completed workovers</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                completedTbody.innerHTML = completed.map(w => {
+                    const rig = rigs.find(r => r.id === w.rig_id);
+                    const duration = w.start_date && w.end_date ?
+                        calculateDays(w.start_date, w.end_date) : '-';
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
+                            <td>${rig ? escapeHtml(rig.name) : '-'}</td>
+                            <td>${formatDate(w.start_date)}</td>
+                            <td>${formatDate(w.end_date)}</td>
+                            <td>${duration} days</td>
+                            <td>${escapeHtml(w.work_type || '-')}</td>
+                            <td>${w.cost ? '$' + parseFloat(w.cost).toLocaleString() : '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        function renderRigsTable() {
+            const tbody = document.getElementById('rigsTable');
+
+            if (rigs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-icon">🚜</div>
+                            <p>No rigs added yet. Click "+ Add Rig" to get started.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = rigs.map(r => {
+                const activeWorkover = workovers.find(w =>
+                    w.rig_id === r.id && (w.status === 'active' || w.status === 'in_progress')
+                );
+                const status = activeWorkover ? 'assigned' : (r.status || 'available');
+                const statusClass = status === 'assigned' ? 'assigned' : 'available';
+
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(r.name)}</strong></td>
+                        <td>${escapeHtml(r.contractor || '-')}</td>
+                        <td><span class="status-badge ${statusClass}">${formatStatus(status)}</span></td>
+                        <td>${activeWorkover ? escapeHtml(activeWorkover.well_name) : '-'}</td>
+                        <td>${(r.dayRate || r.day_rate) ? '$' + parseFloat(r.dayRate || r.day_rate).toLocaleString() : '-'}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-danger btn-sm" onclick="deleteRig(${r.id})">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderProductionTable() {
+            const tbody = document.getElementById('productionTable');
+            const filter = document.getElementById('productionWellFilter')?.value?.toLowerCase() || '';
+
+            const filtered = production.filter(p =>
+                !filter || (p.well_name && p.well_name.toLowerCase().includes(filter))
+            );
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-icon">📈</div>
+                            <p>${filter ? 'No matching production data' : 'No production data available'}</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Group by well to show delete button once per well
+            const wellsInProduction = new Set();
+            tbody.innerHTML = filtered.slice(0, 100).map(p => {
+                const wellName = p.well_name || p.well || '-';
+                const showDelete = !wellsInProduction.has(wellName);
+                wellsInProduction.add(wellName);
+
+                return `
+                    <tr>
+                        <td>${formatDate(p.date || p.production_date)}</td>
+                        <td><strong>${escapeHtml(wellName)}</strong></td>
+                        <td>${p.oil != null ? parseFloat(p.oil).toLocaleString() : '-'}</td>
+                        <td>${p.gas != null ? parseFloat(p.gas).toLocaleString() : '-'}</td>
+                        <td>${p.water != null ? parseFloat(p.water).toLocaleString() : '-'}</td>
+                        <td class="action-buttons">
+                            ${showDelete && wellName !== '-' ? `<button class="btn btn-danger btn-sm" onclick="deleteWell('${escapeHtml(wellName).replace(/'/g, "\\'")}')">Delete Well</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateRigDropdown() {
+            const select = document.getElementById('workoverRig');
+            const availableRigs = rigs.filter(r => {
+                const hasActiveWorkover = workovers.some(w =>
+                    w.rig_id === r.id && (w.status === 'active' || w.status === 'in_progress')
+                );
+                return !hasActiveWorkover;
+            });
+
+            select.innerHTML = '<option value="">Select Rig</option>' +
+                availableRigs.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+        }
+
+        function updateWellsDropdown() {
+            const select = document.getElementById('workoverWellName');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">Select Well</option>' +
+                wells.map(w => `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`).join('');
+        }
+
+        // CRUD operations
+        async function createWorkover() {
+            // Get well name from dropdown or custom input
+            let wellName = document.getElementById('workoverWellName').value.trim();
+            const customWellName = document.getElementById('workoverWellNameCustom').value.trim();
+
+            if (customWellName) {
+                wellName = customWellName;
+            }
+
+            if (!wellName) {
+                showToast('Well name is required', 'error');
+                return;
+            }
+
+            const reason = document.getElementById('workoverReason').value.trim() || document.getElementById('workoverType').value;
+            const estCost = document.getElementById('workoverEstCost').value;
+            const finalCost = document.getElementById('workoverFinalCost').value;
+
+            // Get selected rig name (API expects rig name, not ID)
+            const rigSelect = document.getElementById('workoverRig');
+            const rigId = rigSelect.value;
+            let rigName = '';
+            if (rigId) {
+                const selectedRig = rigs.find(r => r.id === parseInt(rigId));
+                rigName = selectedRig ? selectedRig.name : '';
+            }
+
+            if (!rigName) {
+                showToast('Please select a rig', 'error');
+                return;
+            }
+
+            // API expects: well, rig (name), reason, type, estCost
+            const workover = {
+                well: wellName,
+                rig: rigName,
+                reason: reason,
+                type: document.getElementById('workoverType').value,
+                estCost: estCost ? parseFloat(estCost) : null
+            };
+
+            // Only include finalCost if it's provided
+            if (finalCost) {
+                workover.finalCost = parseFloat(finalCost);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/workovers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(workover)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to create workover');
+                }
+
+                showToast('Workover created successfully', 'success');
+                closeModal('newWorkoverModal');
+                clearWorkoverForm();
+                await loadWorkovers();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error creating workover:', error);
+                showToast(error.message || 'Failed to create workover', 'error');
+            }
+        }
+
+        async function startWorkover(id) {
+            // Find available rigs
+            const availableRigs = rigs.filter(r => {
+                const hasActiveWorkover = workovers.some(w =>
+                    w.rig_id === r.id && (w.status === 'active' || w.status === 'in_progress')
+                );
+                return !hasActiveWorkover;
+            });
+
+            if (availableRigs.length === 0) {
+                showToast('No available rigs. Please wait for a rig to become available.', 'warning');
+                return;
+            }
+
+            const rigName = prompt(`Select rig to assign:\n${availableRigs.map((r, i) => `${i + 1}. ${r.name}`).join('\n')}\n\nEnter number:`);
+            if (!rigName) return;
+
+            const rigIndex = parseInt(rigName) - 1;
+            if (isNaN(rigIndex) || rigIndex < 0 || rigIndex >= availableRigs.length) {
+                showToast('Invalid selection', 'error');
+                return;
+            }
+
+            const selectedRig = availableRigs[rigIndex];
+
+            try {
+                const response = await fetch(`${API_BASE}/workovers/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'active',
+                        rig_id: selectedRig.id,
+                        start_date: new Date().toISOString()
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to start workover');
+
+                showToast('Workover started', 'success');
+                await loadWorkovers();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error starting workover:', error);
+                showToast('Failed to start workover', 'error');
+            }
+        }
+
+        function openCompleteModal(id) {
+            document.getElementById('completeWorkoverId').value = id;
+            document.getElementById('workoverCost').value = '';
+            document.getElementById('workoverNotes').value = '';
+            openModal('completeWorkoverModal');
+        }
+
+        async function completeWorkover() {
+            const id = document.getElementById('completeWorkoverId').value;
+            const cost = document.getElementById('workoverCost').value;
+            const notes = document.getElementById('workoverNotes').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/workovers/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'completed',
+                        end_date: new Date().toISOString(),
+                        cost: cost ? parseFloat(cost) : null,
+                        notes: notes
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to complete workover');
+
+                showToast('Workover completed', 'success');
+                closeModal('completeWorkoverModal');
+                await loadWorkovers();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error completing workover:', error);
+                showToast('Failed to complete workover', 'error');
+            }
+        }
+
+        async function createRig() {
+            const name = document.getElementById('rigName').value.trim();
+            const contractor = document.getElementById('rigContractor').value.trim();
+            const dayRateValue = document.getElementById('rigDayRate').value;
+
+            if (!name) {
+                showToast('Rig name is required', 'error');
+                return;
+            }
+            if (!contractor) {
+                showToast('Contractor is required', 'error');
+                return;
+            }
+            if (!dayRateValue) {
+                showToast('Day rate is required', 'error');
+                return;
+            }
+
+            // API expects: name, contractor, dayRate (camelCase)
+            const rig = {
+                name: name,
+                contractor: contractor,
+                dayRate: parseFloat(dayRateValue)
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/rigs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(rig)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to create rig');
+                }
+
+                showToast('Rig added successfully', 'success');
+                closeModal('newRigModal');
+                clearRigForm();
+                await loadRigs();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error creating rig:', error);
+                showToast(error.message || 'Failed to add rig', 'error');
+            }
+        }
+
+        async function deleteRig(id) {
+            const hasActiveWorkover = workovers.some(w =>
+                w.rig_id === id && (w.status === 'active' || w.status === 'in_progress')
+            );
+
+            if (hasActiveWorkover) {
+                showToast('Cannot delete rig with active workover', 'error');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete this rig?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/rigs/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete rig');
+
+                showToast('Rig deleted', 'success');
+                await loadRigs();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error deleting rig:', error);
+                showToast('Failed to delete rig', 'error');
+            }
+        }
+
+        async function deleteWell(wellName) {
+            if (!confirm(`Are you sure you want to delete all production data for well "${wellName}"?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/wells/${encodeURIComponent(wellName)}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete well');
+
+                showToast('Well deleted', 'success');
+                await loadProduction();
+                await loadWells();
+            } catch (error) {
+                console.error('Error deleting well:', error);
+                showToast('Failed to delete well', 'error');
+            }
+        }
+
+        // UI Helper functions
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function openNewWorkoverModal() {
+            clearWorkoverForm();
+            updateRigDropdown();
+            updateWellsDropdown();
+            openModal('newWorkoverModal');
+        }
+
+        function openNewRigModal() {
+            clearRigForm();
+            openModal('newRigModal');
+        }
+
+        function clearWorkoverForm() {
+            document.getElementById('workoverWellName').value = '';
+            document.getElementById('workoverWellNameCustom').value = '';
+            document.getElementById('workoverRig').value = '';
+            document.getElementById('workoverType').value = 'Pump Change';
+            document.getElementById('workoverReason').value = '';
+            document.getElementById('workoverEstCost').value = '';
+            document.getElementById('workoverFinalCost').value = '';
+        }
+
+        function clearRigForm() {
+            document.getElementById('rigName').value = '';
+            document.getElementById('rigContractor').value = '';
+            document.getElementById('rigDayRate').value = '';
+        }
+
+        function filterProduction() {
+            renderProductionTable();
+        }
+
+        function setConnectionStatus(connected) {
+            const dot = document.getElementById('connectionDot');
+            const text = document.getElementById('connectionText');
+
+            if (connected) {
+                dot.classList.remove('disconnected');
+                text.textContent = 'Connected';
+            } else {
+                dot.classList.add('disconnected');
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Utility functions
+        function calculateDays(startDate, endDate = null) {
+            if (!startDate) return 0;
+            const start = new Date(startDate);
+            const end = endDate ? new Date(endDate) : new Date();
+            const diffTime = Math.abs(end - start);
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        function formatStatus(status) {
+            if (!status) return 'Unknown';
+            return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modals on outside click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(m => {
+                    m.classList.remove('active');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
