@@ -899,6 +899,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Completed Workovers</h2>
+                        <button class="btn btn-primary btn-sm" onclick="openQuickAddCompletedModal()">+ Quick Add Completed</button>
                     </div>
                     <div class="card-body">
                         <div class="table-container">
@@ -1109,6 +1110,68 @@
             <div class="modal-footer">
                 <button class="btn" onclick="closeModal('completeWorkoverModal')">Cancel</button>
                 <button class="btn btn-success" onclick="completeWorkover()">Complete Workover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Add Completed Workover Modal -->
+    <div class="modal-overlay" id="quickAddCompletedModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Quick Add Completed Workover</h3>
+                <button class="modal-close" onclick="closeModal('quickAddCompletedModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Well Name *</label>
+                    <select class="form-control" id="quickAddWellName" required>
+                        <option value="">Select Well</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Or Enter New Well</label>
+                    <input type="text" class="form-control" id="quickAddWellNameCustom" placeholder="Type well name if not in list">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rig *</label>
+                    <select class="form-control" id="quickAddRig" required>
+                        <option value="">Select Rig</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Reason/Work Type *</label>
+                    <input type="text" class="form-control" id="quickAddReason" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Work Type</label>
+                    <select class="form-control" id="quickAddWorkType">
+                        <option value="Workover">Workover</option>
+                        <option value="Tubing Repair">Tubing Repair</option>
+                        <option value="Pump Change">Pump Change</option>
+                        <option value="Rods">Rods</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Start Date *</label>
+                    <input type="date" class="form-control" id="quickAddStartDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">End Date *</label>
+                    <input type="date" class="form-control" id="quickAddEndDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Total Cost ($)</label>
+                    <input type="number" class="form-control" id="quickAddCost" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" id="quickAddNotes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('quickAddCompletedModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="quickAddCompletedWorkover()">Add Completed Workover</button>
             </div>
         </div>
     </div>
@@ -1505,6 +1568,7 @@
                             <td>${escapeHtml(w.work_type || '-')}</td>
                             <td class="action-buttons">
                                 <button class="btn btn-success btn-sm" onclick="openCompleteModal(${w.id})">Complete</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteWorkover(${w.id})">Delete</button>
                             </td>
                         </tr>
                     `;
@@ -1797,6 +1861,120 @@
             } catch (error) {
                 console.error('Error completing workover:', error);
                 showToast('Failed to complete workover', 'error');
+            }
+        }
+
+        async function deleteWorkover(id) {
+            if (!confirm('Are you sure you want to delete this workover?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/workovers/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete workover');
+
+                showToast('Workover deleted', 'success');
+                await loadWorkovers();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error deleting workover:', error);
+                showToast('Failed to delete workover', 'error');
+            }
+        }
+
+        function openQuickAddCompletedModal() {
+            // Populate well dropdown
+            const wellSelect = document.getElementById('quickAddWellName');
+            wellSelect.innerHTML = '<option value="">Select Well</option>' +
+                wells.map(w => `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`).join('');
+
+            // Populate rig dropdown
+            const rigSelect = document.getElementById('quickAddRig');
+            rigSelect.innerHTML = '<option value="">Select Rig</option>' +
+                rigs.map(r => `<option value="${escapeHtml(r.name)}">${escapeHtml(r.name)}</option>`).join('');
+
+            // Clear form
+            document.getElementById('quickAddWellNameCustom').value = '';
+            document.getElementById('quickAddReason').value = '';
+            document.getElementById('quickAddWorkType').value = 'Workover';
+            document.getElementById('quickAddStartDate').value = '';
+            document.getElementById('quickAddEndDate').value = '';
+            document.getElementById('quickAddCost').value = '';
+            document.getElementById('quickAddNotes').value = '';
+
+            openModal('quickAddCompletedModal');
+        }
+
+        async function quickAddCompletedWorkover() {
+            const wellName = document.getElementById('quickAddWellNameCustom').value.trim() ||
+                           document.getElementById('quickAddWellName').value;
+            const rig = document.getElementById('quickAddRig').value;
+            const reason = document.getElementById('quickAddReason').value.trim();
+            const workType = document.getElementById('quickAddWorkType').value;
+            const startDate = document.getElementById('quickAddStartDate').value;
+            const endDate = document.getElementById('quickAddEndDate').value;
+            const cost = document.getElementById('quickAddCost').value;
+            const notes = document.getElementById('quickAddNotes').value.trim();
+
+            if (!wellName) {
+                showToast('Well name is required', 'error');
+                return;
+            }
+            if (!rig) {
+                showToast('Rig is required', 'error');
+                return;
+            }
+            if (!reason) {
+                showToast('Reason is required', 'error');
+                return;
+            }
+            if (!startDate || !endDate) {
+                showToast('Start and end dates are required', 'error');
+                return;
+            }
+
+            try {
+                // Create workover with completed status
+                const response = await fetch(`${API_BASE}/workovers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        well: wellName,
+                        rig: rig,
+                        reason: reason,
+                        type: workType,
+                        status: 'Completed',
+                        estCost: cost ? parseFloat(cost) : null,
+                        notes: notes,
+                        createdBy: 'system'
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to create workover');
+
+                const newWorkover = await response.json();
+
+                // Update the workover to set start_date, end_date, and final_cost
+                await fetch(`${API_BASE}/workovers/${newWorkover.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'Completed',
+                        cost: cost ? parseFloat(cost) : null,
+                        notes: notes
+                    })
+                });
+
+                showToast('Completed workover added', 'success');
+                closeModal('quickAddCompletedModal');
+                await loadWorkovers();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error adding completed workover:', error);
+                showToast('Failed to add completed workover', 'error');
             }
         }
 
