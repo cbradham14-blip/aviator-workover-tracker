@@ -977,39 +977,6 @@
                 </div>
             </div>
 
-            <!-- Daily Update Modal -->
-            <div class="modal" id="dailyUpdateModal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>Add Daily Update</h2>
-                        <button class="modal-close" onclick="closeModal('dailyUpdateModal')">&times;</button>
-                    </div>
-                    <form id="dailyUpdateForm" onsubmit="saveDailyUpdate(event)">
-                        <input type="hidden" id="dailyUpdateWorkhoverId">
-                        <div class="form-group">
-                            <label>Well</label>
-                            <input type="text" id="dailyUpdateWell" class="form-control" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" id="dailyUpdateDate" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Daily Cost ($)</label>
-                            <input type="number" id="dailyUpdateCost" class="form-control" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label>Notes - What was done today?</label>
-                            <textarea id="dailyUpdateNotes" class="form-control" rows="4" placeholder="Describe work performed, issues encountered, etc."></textarea>
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" onclick="closeModal('dailyUpdateModal')">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Update</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
             <!-- Completed Workovers Tab -->
             <div class="tab-content" id="completedWorkovers">
                 <div class="filter-bar">
@@ -1297,6 +1264,39 @@
             <div class="modal-footer">
                 <button class="btn" onclick="closeModal('quickAddCompletedModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="quickAddCompletedWorkover()">Add Completed Workover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Update Modal -->
+    <div class="modal-overlay" id="dailyUpdateModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Daily Update</h3>
+                <button class="modal-close" onclick="closeModal('dailyUpdateModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="dailyUpdateWorkhoverId">
+                <div class="form-group">
+                    <label class="form-label">Well</label>
+                    <input type="text" class="form-control" id="dailyUpdateWell" readonly style="background: #f5f5f5;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" id="dailyUpdateDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Daily Cost ($)</label>
+                    <input type="number" class="form-control" id="dailyUpdateCost" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes / What was done</label>
+                    <textarea class="form-control" id="dailyUpdateNotes" rows="3" placeholder="Describe work performed today..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('dailyUpdateModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveDailyUpdate()">Save Update</button>
             </div>
         </div>
     </div>
