@@ -2083,9 +2083,7 @@
             openModal('dailyUpdateModal');
         }
 
-        async function saveDailyUpdate(event) {
-            event.preventDefault();
-
+        async function saveDailyUpdate() {
             const workhoverId = document.getElementById('dailyUpdateWorkhoverId').value;
             const updateDate = document.getElementById('dailyUpdateDate').value;
             const dailyCost = document.getElementById('dailyUpdateCost').value || 0;
