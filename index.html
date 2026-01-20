@@ -911,7 +911,10 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Wells Currently Down</h2>
-                        <button class="btn btn-primary btn-sm" onclick="openNewWorkoverModal()">+ New Workover</button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-warning btn-sm" onclick="openAddWellDownModal()">+ Add Well Down</button>
+                            <button class="btn btn-primary btn-sm" onclick="openNewWorkoverModal()">+ New Workover</button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-container">
@@ -1301,6 +1304,54 @@
         </div>
     </div>
 
+    <!-- Add Well Down Modal -->
+    <div class="modal-overlay" id="addWellDownModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Well Down</h3>
+                <button class="modal-close" onclick="closeModal('addWellDownModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Well Name *</label>
+                    <input type="text" class="form-control" id="wellDownName" required placeholder="e.g., SMITH 1-A">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Lease</label>
+                    <input type="text" class="form-control" id="wellDownLease" placeholder="e.g., SMITH UNIT">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Route</label>
+                    <input type="text" class="form-control" id="wellDownRoute" placeholder="e.g., West Route">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">BOPD (Deferred Production) *</label>
+                    <input type="number" class="form-control" id="wellDownBOPD" step="0.01" required placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Days Down</label>
+                    <input type="number" class="form-control" id="wellDownDays" value="1" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Reason</label>
+                    <input type="text" class="form-control" id="wellDownReason" placeholder="e.g., Downhole Failure">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cost Estimate ($)</label>
+                    <input type="number" class="form-control" id="wellDownCostEst" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Comments</label>
+                    <textarea class="form-control" id="wellDownComments" rows="2" placeholder="Additional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('addWellDownModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveWellDown()">Add Well</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -1523,14 +1574,90 @@
 
         function createWorkoverFromWellDown(wellData) {
             // Pre-fill the workover form with well data
-            document.getElementById('workoverWell').value = wellData.well;
-            document.getElementById('workoverType').value = 'Repair';
-            document.getElementById('workoverPriority').value = 'High';
-            document.getElementById('workoverStatus').value = 'Pending';
-            document.getElementById('workoverDescription').value = `Reason Down: ${wellData.reason || 'Unknown'}\nDays Offline: ${wellData.days_offline || 0}\nDeferred Production: ${wellData.def_bopd || 0} BOPD`;
+            // Set the custom well name field since it may not be in the dropdown
+            document.getElementById('workoverWellNameCustom').value = wellData.well || '';
 
-            // Switch to the modal
-            openModal('workoverModal');
+            // Try to select it in dropdown if it exists
+            const wellSelect = document.getElementById('workoverWellName');
+            const wellOption = Array.from(wellSelect.options).find(opt => opt.value === wellData.well);
+            if (wellOption) {
+                wellSelect.value = wellData.well;
+            } else {
+                wellSelect.value = '';
+            }
+
+            // Set work type based on reason if possible
+            const reason = (wellData.reason || '').toLowerCase();
+            if (reason.includes('pump')) {
+                document.getElementById('workoverType').value = 'Pump Change';
+            } else if (reason.includes('rod')) {
+                document.getElementById('workoverType').value = 'Rod Repair';
+            } else if (reason.includes('tubing')) {
+                document.getElementById('workoverType').value = 'Tubing Repair';
+            } else {
+                document.getElementById('workoverType').value = 'Other';
+            }
+
+            // Set estimated cost if available
+            if (wellData.cost_est_pre_wo) {
+                document.getElementById('workoverEstCost').value = wellData.cost_est_pre_wo;
+            }
+
+            // Set reason/notes
+            document.getElementById('workoverReason').value = `Reason Down: ${wellData.reason || 'Unknown'}\nDays Offline: ${wellData.days_offline || 0}\nDeferred Production: ${wellData.def_bopd || 0} BOPD`;
+
+            // Open the New Workover modal
+            openModal('newWorkoverModal');
+        }
+
+        function openAddWellDownModal() {
+            // Clear form
+            document.getElementById('wellDownName').value = '';
+            document.getElementById('wellDownLease').value = '';
+            document.getElementById('wellDownRoute').value = '';
+            document.getElementById('wellDownBOPD').value = '';
+            document.getElementById('wellDownDays').value = '1';
+            document.getElementById('wellDownReason').value = '';
+            document.getElementById('wellDownCostEst').value = '';
+            document.getElementById('wellDownComments').value = '';
+            openModal('addWellDownModal');
+        }
+
+        async function saveWellDown() {
+            const wellName = document.getElementById('wellDownName').value.trim();
+            const bopd = document.getElementById('wellDownBOPD').value;
+
+            if (!wellName || !bopd) {
+                showToast('Well Name and BOPD are required', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/wells-down`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        well: wellName,
+                        lease: document.getElementById('wellDownLease').value.trim() || null,
+                        route: document.getElementById('wellDownRoute').value.trim() || null,
+                        def_bopd: parseFloat(bopd),
+                        days_offline: parseInt(document.getElementById('wellDownDays').value) || 1,
+                        reason: document.getElementById('wellDownReason').value.trim() || null,
+                        cost_est_pre_wo: parseFloat(document.getElementById('wellDownCostEst').value) || null,
+                        comments: document.getElementById('wellDownComments').value.trim() || null
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to add well');
+
+                showToast('Well added to down list', 'success');
+                closeModal('addWellDownModal');
+                await loadWellsDown();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error adding well down:', error);
+                showToast('Failed to add well', 'error');
+            }
         }
 
         function renderWellsDownTable() {
