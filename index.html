@@ -673,6 +673,85 @@
             color: var(--warning);
         }
 
+        /* Expandable Workover Details */
+        .expand-btn {
+            background: none;
+            border: 1px solid var(--gray-300);
+            padding: 2px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+        .expand-btn:hover {
+            background: var(--gray-100);
+        }
+
+        .workover-details-row td {
+            background: var(--gray-50);
+            padding: 0 !important;
+        }
+
+        .workover-details-content {
+            padding: 1rem 2rem;
+            border-left: 4px solid var(--primary);
+            margin: 0.5rem 1rem;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .updates-summary {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .updates-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .update-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--gray-50);
+            border-radius: 4px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .update-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .update-date {
+            color: var(--gray-700);
+        }
+
+        .update-cost {
+            color: var(--success);
+        }
+
+        .update-notes {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+
+        .updates-empty {
+            text-align: center;
+            padding: 1rem;
+            color: var(--gray-600);
+        }
+
+        .loading-small {
+            text-align: center;
+            padding: 1rem;
+            color: var(--gray-500);
+        }
+
         /* Production Chart Placeholder */
         .chart-placeholder {
             background: var(--gray-100);
@@ -875,17 +954,19 @@
                             <table>
                                 <thead>
                                     <tr>
+                                        <th></th>
                                         <th>Well Name</th>
                                         <th>Rig</th>
                                         <th>Start Date</th>
                                         <th>Days Active</th>
+                                        <th>Total Cost</th>
                                         <th>Work Type</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="activeWorkoversTable">
                                     <tr>
-                                        <td colspan="6" class="loading">
+                                        <td colspan="8" class="loading">
                                             <div class="spinner"></div>
                                         </td>
                                     </tr>
@@ -893,6 +974,39 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Daily Update Modal -->
+            <div class="modal" id="dailyUpdateModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Add Daily Update</h2>
+                        <button class="modal-close" onclick="closeModal('dailyUpdateModal')">&times;</button>
+                    </div>
+                    <form id="dailyUpdateForm" onsubmit="saveDailyUpdate(event)">
+                        <input type="hidden" id="dailyUpdateWorkhoverId">
+                        <div class="form-group">
+                            <label>Well</label>
+                            <input type="text" id="dailyUpdateWell" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="dailyUpdateDate" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Daily Cost ($)</label>
+                            <input type="number" id="dailyUpdateCost" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Notes - What was done today?</label>
+                            <textarea id="dailyUpdateNotes" class="form-control" rows="4" placeholder="Describe work performed, issues encountered, etc."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('dailyUpdateModal')">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Update</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -1610,7 +1724,7 @@
             if (activeWorkovers.length === 0) {
                 activeTbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="empty-state">
+                        <td colspan="8" class="empty-state">
                             <div class="empty-state-icon">🔧</div>
                             <p>No active workovers</p>
                         </td>
@@ -1620,16 +1734,29 @@
                 activeTbody.innerHTML = activeWorkovers.map(w => {
                     const rigName = w.rig || '-';
                     const days = calculateDays(w.start_date || w.created_at);
+                    const totalCost = w.cost || 0;
                     return `
-                        <tr>
+                        <tr class="workover-row" data-workover-id="${w.id}">
+                            <td>
+                                <button class="btn btn-sm expand-btn" onclick="toggleWorkoverDetails(${w.id})">▶</button>
+                            </td>
                             <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
                             <td>${escapeHtml(rigName)}</td>
                             <td>${formatDate(w.start_date || w.created_at)}</td>
                             <td><span class="days-counter ${days > 7 ? 'critical' : days > 3 ? 'warning' : ''}">${days} days</span></td>
+                            <td><strong>$${parseFloat(totalCost).toLocaleString()}</strong></td>
                             <td>${escapeHtml(w.work_type || '-')}</td>
                             <td class="action-buttons">
+                                <button class="btn btn-primary btn-sm" onclick="openDailyUpdateModal(${w.id}, '${escapeHtml(w.well_name || '')}')">+ Update</button>
                                 <button class="btn btn-success btn-sm" onclick="openCompleteModal(${w.id})">Complete</button>
                                 <button class="btn btn-danger btn-sm" onclick="deleteWorkover(${w.id})">Delete</button>
+                            </td>
+                        </tr>
+                        <tr class="workover-details-row" id="details-${w.id}" style="display: none;">
+                            <td colspan="8">
+                                <div class="workover-details-content" id="details-content-${w.id}">
+                                    <div class="loading-small">Loading updates...</div>
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -1943,6 +2070,112 @@
             } catch (error) {
                 console.error('Error deleting workover:', error);
                 showToast('Failed to delete workover', 'error');
+            }
+        }
+
+        // Daily Update Functions
+        function openDailyUpdateModal(workhoverId, wellName) {
+            document.getElementById('dailyUpdateWorkhoverId').value = workhoverId;
+            document.getElementById('dailyUpdateWell').value = wellName;
+            document.getElementById('dailyUpdateDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('dailyUpdateCost').value = '';
+            document.getElementById('dailyUpdateNotes').value = '';
+            openModal('dailyUpdateModal');
+        }
+
+        async function saveDailyUpdate(event) {
+            event.preventDefault();
+
+            const workhoverId = document.getElementById('dailyUpdateWorkhoverId').value;
+            const updateDate = document.getElementById('dailyUpdateDate').value;
+            const dailyCost = document.getElementById('dailyUpdateCost').value || 0;
+            const notes = document.getElementById('dailyUpdateNotes').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/workover-updates/${workhoverId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        workover_id: parseInt(workhoverId),
+                        update_date: updateDate,
+                        daily_cost: parseFloat(dailyCost),
+                        notes: notes,
+                        created_by: currentUser?.name || null
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to save update');
+
+                const result = await response.json();
+                showToast(`Update saved. Total cost: $${result.total_cost.toLocaleString()}`, 'success');
+                closeModal('dailyUpdateModal');
+
+                // Refresh workovers to show new total
+                await loadWorkovers();
+
+                // If details are expanded, refresh them
+                const detailsRow = document.getElementById(`details-${workhoverId}`);
+                if (detailsRow && detailsRow.style.display !== 'none') {
+                    loadWorkoverDetails(workhoverId);
+                }
+            } catch (error) {
+                console.error('Error saving daily update:', error);
+                showToast('Failed to save update', 'error');
+            }
+        }
+
+        async function toggleWorkoverDetails(workhoverId) {
+            const detailsRow = document.getElementById(`details-${workhoverId}`);
+            const expandBtn = document.querySelector(`tr[data-workover-id="${workhoverId}"] .expand-btn`);
+
+            if (detailsRow.style.display === 'none') {
+                detailsRow.style.display = 'table-row';
+                expandBtn.textContent = '▼';
+                await loadWorkoverDetails(workhoverId);
+            } else {
+                detailsRow.style.display = 'none';
+                expandBtn.textContent = '▶';
+            }
+        }
+
+        async function loadWorkoverDetails(workhoverId) {
+            const contentDiv = document.getElementById(`details-content-${workhoverId}`);
+
+            try {
+                const response = await fetch(`${API_BASE}/workover-updates/${workhoverId}`);
+                if (!response.ok) throw new Error('Failed to load updates');
+
+                const data = await response.json();
+                const updates = data.updates || [];
+                const totalCost = data.total_cost || 0;
+
+                if (updates.length === 0) {
+                    contentDiv.innerHTML = `
+                        <div class="updates-empty">
+                            <p>No daily updates yet. Click "+ Update" to add the first update.</p>
+                        </div>
+                    `;
+                } else {
+                    contentDiv.innerHTML = `
+                        <div class="updates-summary">
+                            <strong>Total Cost: $${totalCost.toLocaleString()}</strong> | ${updates.length} update(s)
+                        </div>
+                        <div class="updates-list">
+                            ${updates.map(u => `
+                                <div class="update-item">
+                                    <div class="update-header">
+                                        <span class="update-date">${formatDate(u.update_date)}</span>
+                                        <span class="update-cost">$${(u.daily_cost || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div class="update-notes">${escapeHtml(u.notes || 'No notes')}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading workover details:', error);
+                contentDiv.innerHTML = '<div class="error">Failed to load updates</div>';
             }
         }
 
