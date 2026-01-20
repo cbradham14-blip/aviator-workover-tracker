@@ -848,11 +848,12 @@
                                         <th>Reason</th>
                                         <th>Cost Est</th>
                                         <th>Comments</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="wellsDownTable">
                                     <tr>
-                                        <td colspan="9" class="loading">
+                                        <td colspan="10" class="loading">
                                             <div class="spinner"></div>
                                         </td>
                                     </tr>
@@ -1395,20 +1396,40 @@
                 const response = await fetch(`${API_BASE}/wells-down`);
                 if (!response.ok) throw new Error('Failed to fetch wells down');
                 wellsDown = await response.json();
+                // Sort by BOPD highest to lowest
+                wellsDown.sort((a, b) => (b.def_bopd || 0) - (a.def_bopd || 0));
                 renderWellsDownTable();
+                // Update badge with actual count
+                document.getElementById('wellsDownBadge').textContent = wellsDown.length;
             } catch (error) {
                 console.error('Error loading wells down:', error);
                 throw error;
             }
         }
 
+        function createWorkoverFromWellDown(wellData) {
+            // Pre-fill the workover form with well data
+            document.getElementById('workoverWell').value = wellData.well;
+            document.getElementById('workoverType').value = 'Repair';
+            document.getElementById('workoverPriority').value = 'High';
+            document.getElementById('workoverStatus').value = 'Pending';
+            document.getElementById('workoverDescription').value = `Reason Down: ${wellData.reason || 'Unknown'}\nDays Offline: ${wellData.days_offline || 0}\nDeferred Production: ${wellData.def_bopd || 0} BOPD`;
+
+            // Switch to the modal
+            openModal('workoverModal');
+        }
+
         function renderWellsDownTable() {
             const tbody = document.getElementById('wellsDownTable');
+
+            // Calculate totals
+            const totalBOPD = wellsDown.reduce((sum, w) => sum + (w.def_bopd || 0), 0);
+            const totalProdDown = wellsDown.reduce((sum, w) => sum + (w.production_down || 0), 0);
 
             if (wellsDown.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="empty-state">
+                        <td colspan="10" class="empty-state">
                             <div class="empty-state-icon">✅</div>
                             <p>No wells currently down</p>
                         </td>
@@ -1418,20 +1439,33 @@
                 tbody.innerHTML = wellsDown.map(w => {
                     const daysDown = w.days_offline || 0;
                     const prodDown = w.production_down || (daysDown * (w.def_bopd || 0));
+                    const wellDataJson = JSON.stringify(w).replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     return `
                         <tr>
                             <td><strong>${escapeHtml(w.well)}</strong></td>
                             <td>${escapeHtml(w.lease || '-')}</td>
                             <td>${escapeHtml(w.route || '-')}</td>
-                            <td>${(w.def_bopd || 0).toFixed(2)}</td>
+                            <td><strong>${(w.def_bopd || 0).toFixed(2)}</strong></td>
                             <td><span class="days-counter ${daysDown > 7 ? 'critical' : daysDown > 3 ? 'warning' : ''}">${daysDown}</span></td>
                             <td><strong>${prodDown.toFixed(1)} BBL</strong></td>
                             <td>${escapeHtml(w.reason || '-')}</td>
                             <td>${w.cost_est_pre_wo ? '$' + w.cost_est_pre_wo.toLocaleString() : '-'}</td>
                             <td>${escapeHtml(w.comments || '-')}</td>
+                            <td><button class="btn btn-sm btn-primary" onclick='createWorkoverFromWellDown(${wellDataJson})'>+ Workover</button></td>
                         </tr>
                     `;
                 }).join('');
+
+                // Add totals row
+                tbody.innerHTML += `
+                    <tr style="background: var(--gray-200); font-weight: bold;">
+                        <td colspan="3">TOTALS (${wellsDown.length} wells)</td>
+                        <td>${totalBOPD.toFixed(2)} BOPD</td>
+                        <td></td>
+                        <td>${totalProdDown.toFixed(1)} BBL</td>
+                        <td colspan="4"></td>
+                    </tr>
+                `;
             }
         }
 
