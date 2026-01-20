@@ -1313,8 +1313,14 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label">Well Name *</label>
-                    <input type="text" class="form-control" id="wellDownName" required placeholder="e.g., SMITH 1-A">
+                    <label class="form-label">Select Well *</label>
+                    <select class="form-control" id="wellDownSelect" onchange="populateWellDownFields()">
+                        <option value="">-- Select a Well --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Or Enter New Well Name</label>
+                    <input type="text" class="form-control" id="wellDownName" placeholder="Type well name if not in list">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Lease</label>
@@ -1334,7 +1340,18 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Reason</label>
-                    <input type="text" class="form-control" id="wellDownReason" placeholder="e.g., Downhole Failure">
+                    <select class="form-control" id="wellDownReason">
+                        <option value="">-- Select Reason --</option>
+                        <option value="Downhole Failure">Downhole Failure</option>
+                        <option value="Electrical Failure/Downtime">Electrical Failure/Downtime</option>
+                        <option value="Surface Equipment Failure">Surface Equipment Failure</option>
+                        <option value="Pump Failure">Pump Failure</option>
+                        <option value="Rod Failure">Rod Failure</option>
+                        <option value="Tubing Failure">Tubing Failure</option>
+                        <option value="Waiting on Workover">Waiting on Workover</option>
+                        <option value="Weather">Weather</option>
+                        <option value="Other">Other</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cost Estimate ($)</label>
@@ -1612,6 +1629,7 @@
 
         function openAddWellDownModal() {
             // Clear form
+            document.getElementById('wellDownSelect').value = '';
             document.getElementById('wellDownName').value = '';
             document.getElementById('wellDownLease').value = '';
             document.getElementById('wellDownRoute').value = '';
@@ -1620,11 +1638,56 @@
             document.getElementById('wellDownReason').value = '';
             document.getElementById('wellDownCostEst').value = '';
             document.getElementById('wellDownComments').value = '';
+
+            // Populate well dropdown from wells array
+            const wellSelect = document.getElementById('wellDownSelect');
+            wellSelect.innerHTML = '<option value="">-- Select a Well --</option>';
+
+            // Add wells from the wells array (if available)
+            if (wells && wells.length > 0) {
+                wells.forEach(w => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify(w);
+                    option.textContent = w.well || w.well_name || w.name;
+                    wellSelect.appendChild(option);
+                });
+            }
+
             openModal('addWellDownModal');
         }
 
+        function populateWellDownFields() {
+            const wellSelect = document.getElementById('wellDownSelect');
+            if (!wellSelect.value) return;
+
+            try {
+                const wellData = JSON.parse(wellSelect.value);
+                document.getElementById('wellDownName').value = wellData.well || wellData.well_name || '';
+                document.getElementById('wellDownLease').value = wellData.lease || '';
+                document.getElementById('wellDownRoute').value = wellData.route || '';
+                // Pre-fill BOPD if available from production data
+                if (wellData.avg_bopd || wellData.def_bopd) {
+                    document.getElementById('wellDownBOPD').value = wellData.avg_bopd || wellData.def_bopd || '';
+                }
+            } catch (e) {
+                console.error('Error parsing well data:', e);
+            }
+        }
+
         async function saveWellDown() {
-            const wellName = document.getElementById('wellDownName').value.trim();
+            let wellName = document.getElementById('wellDownName').value.trim();
+
+            // If no manual entry, try to get from dropdown selection
+            if (!wellName) {
+                const selectVal = document.getElementById('wellDownSelect').value;
+                if (selectVal) {
+                    try {
+                        const wellData = JSON.parse(selectVal);
+                        wellName = wellData.well || wellData.well_name || '';
+                    } catch (e) {}
+                }
+            }
+
             const bopd = document.getElementById('wellDownBOPD').value;
 
             if (!wellName || !bopd) {
