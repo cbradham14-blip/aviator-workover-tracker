@@ -1647,8 +1647,8 @@
             if (wells && wells.length > 0) {
                 wells.forEach(w => {
                     const option = document.createElement('option');
-                    option.value = JSON.stringify(w);
-                    option.textContent = w.well || w.well_name || w.name;
+                    option.value = w.name || w.well || w.well_name;  // Store just the well name
+                    option.textContent = w.name || w.well || w.well_name;
                     wellSelect.appendChild(option);
                 });
             }
@@ -1660,32 +1660,17 @@
             const wellSelect = document.getElementById('wellDownSelect');
             if (!wellSelect.value) return;
 
-            try {
-                const wellData = JSON.parse(wellSelect.value);
-                document.getElementById('wellDownName').value = wellData.well || wellData.well_name || '';
-                document.getElementById('wellDownLease').value = wellData.lease || '';
-                document.getElementById('wellDownRoute').value = wellData.route || '';
-                // Pre-fill BOPD if available from production data
-                if (wellData.avg_bopd || wellData.def_bopd) {
-                    document.getElementById('wellDownBOPD').value = wellData.avg_bopd || wellData.def_bopd || '';
-                }
-            } catch (e) {
-                console.error('Error parsing well data:', e);
-            }
+            // The dropdown value is the well name directly
+            document.getElementById('wellDownName').value = wellSelect.value;
         }
 
         async function saveWellDown() {
+            // Get well name - either from dropdown selection auto-fill or manual entry
             let wellName = document.getElementById('wellDownName').value.trim();
 
-            // If no manual entry, try to get from dropdown selection
+            // Fallback to dropdown value if text field is empty
             if (!wellName) {
-                const selectVal = document.getElementById('wellDownSelect').value;
-                if (selectVal) {
-                    try {
-                        const wellData = JSON.parse(selectVal);
-                        wellName = wellData.well || wellData.well_name || '';
-                    } catch (e) {}
-                }
+                wellName = document.getElementById('wellDownSelect').value || '';
             }
 
             const bopd = document.getElementById('wellDownBOPD').value;
