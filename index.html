@@ -1807,39 +1807,7 @@
         }
 
         function renderWorkoverTables() {
-            // Wells Down
-            const wellsDown = workovers.filter(w => {
-                const status = (w.status || '').toLowerCase();
-                return status === 'down' || status === 'pending';
-            });
-            const wellsDownTbody = document.getElementById('wellsDownTable');
-
-            if (wellsDown.length === 0) {
-                wellsDownTbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <div class="empty-state-icon">✅</div>
-                            <p>No wells currently down</p>
-                        </td>
-                    </tr>
-                `;
-            } else {
-                wellsDownTbody.innerHTML = wellsDown.map(w => {
-                    const days = calculateDays(w.down_date || w.created_at);
-                    return `
-                        <tr>
-                            <td><strong>${escapeHtml(w.well_name || 'Unknown')}</strong></td>
-                            <td>${escapeHtml(w.lease || '-')}</td>
-                            <td>${formatDate(w.down_date || w.created_at)}</td>
-                            <td><span class="days-counter ${days > 7 ? 'critical' : days > 3 ? 'warning' : ''}">${days}</span></td>
-                            <td>${escapeHtml(w.reason || w.work_type || '-')}</td>
-                            <td class="action-buttons">
-                                <button class="btn btn-success btn-sm" onclick="startWorkover(${w.id})">Start</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
+            // Note: Wells Down table is handled by renderWellsDownTable() using wells_down API
 
             // Active Workovers
             const activeWorkovers = workovers.filter(w => {
