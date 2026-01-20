@@ -1708,6 +1708,25 @@
             }
         }
 
+        async function deleteWellDown(id) {
+            if (!confirm('Remove this well from the down list?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/wells-down/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete');
+
+                showToast('Well removed from down list', 'success');
+                await loadWellsDown();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error deleting well down:', error);
+                showToast('Failed to remove well', 'error');
+            }
+        }
+
         function renderWellsDownTable() {
             const tbody = document.getElementById('wellsDownTable');
 
@@ -1740,7 +1759,10 @@
                             <td>${escapeHtml(w.reason || '-')}</td>
                             <td>${w.cost_est_pre_wo ? '$' + w.cost_est_pre_wo.toLocaleString() : '-'}</td>
                             <td>${escapeHtml(w.comments || '-')}</td>
-                            <td><button class="btn btn-sm btn-primary" onclick='createWorkoverFromWellDown(${wellDataJson})'>+ Workover</button></td>
+                            <td class="action-buttons">
+                                <button class="btn btn-sm btn-primary" onclick='createWorkoverFromWellDown(${wellDataJson})'>+ Workover</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteWellDown(${w.id})" title="Remove from list">X</button>
+                            </td>
                         </tr>
                     `;
                 }).join('');
