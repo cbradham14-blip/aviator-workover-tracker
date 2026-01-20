@@ -1441,10 +1441,6 @@
 
         // Render functions
         async function updateDashboard() {
-            const wellsDown = workovers.filter(w => {
-                const status = (w.status || '').toLowerCase();
-                return status === 'down' || status === 'pending';
-            }).length;
             const activeWorkovers = workovers.filter(w => {
                 const status = (w.status || '').toLowerCase();
                 return status === 'active' || status === 'in_progress' || status === 'in progress';
@@ -1457,7 +1453,8 @@
             }).length;
             const availableRigs = rigs.filter(r => r.status === 'Available' || r.status === 'available' || !r.status).length;
 
-            // Calculate production down and revenue down
+            // Calculate production down and revenue down from wells_down API
+            let wellsDownCount = 0;
             let productionDown = 0;
             let revenueDown = 0;
             const oilPrice = 70; // $/bbl - can be made configurable later
@@ -1466,6 +1463,7 @@
                 const response = await fetch(`${API_BASE}/wells-down`);
                 if (response.ok) {
                     const wellsDownData = await response.json();
+                    wellsDownCount = wellsDownData.length;
                     productionDown = wellsDownData.reduce((sum, w) => sum + (w.def_bopd || 0), 0);
                     revenueDown = productionDown * oilPrice;
                 }
@@ -1473,7 +1471,7 @@
                 console.error('Error loading wells down data:', error);
             }
 
-            document.getElementById('statWellsDown').textContent = wellsDown;
+            document.getElementById('statWellsDown').textContent = wellsDownCount;
             document.getElementById('statActiveWorkovers').textContent = activeWorkovers;
             document.getElementById('statCompletedMonth').textContent = completedThisMonth;
             document.getElementById('statAvailableRigs').textContent = availableRigs;
@@ -1481,7 +1479,7 @@
             document.getElementById('statRevenueDown').textContent = '$' + revenueDown.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
             // Update badges
-            document.getElementById('wellsDownBadge').textContent = wellsDown;
+            document.getElementById('wellsDownBadge').textContent = wellsDownCount;
             document.getElementById('activeBadge').textContent = activeWorkovers;
             document.getElementById('completedBadge').textContent = workovers.filter(w => {
                 const status = (w.status || '').toLowerCase();
