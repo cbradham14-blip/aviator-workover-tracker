@@ -425,6 +425,15 @@
             background: var(--primary-light);
         }
 
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+
         .btn-success {
             background: var(--success);
             color: white;
@@ -994,7 +1003,10 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Completed Workovers</h2>
-                        <button class="btn btn-primary btn-sm" onclick="openQuickAddCompletedModal()">+ Quick Add Completed</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary btn-sm" onclick="exportCompletedWorkovers()">Export CSV</button>
+                            <button class="btn btn-primary btn-sm" onclick="openQuickAddCompletedModal()">+ Quick Add Completed</button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-container">
@@ -1999,6 +2011,60 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        function exportCompletedWorkovers() {
+            const completed = workovers.filter(w => {
+                const status = (w.status || '').toLowerCase();
+                return status === 'completed';
+            });
+
+            if (completed.length === 0) {
+                alert('No completed workovers to export');
+                return;
+            }
+
+            // CSV header
+            const headers = ['Well Name', 'Rig', 'Start Date', 'End Date', 'Duration (Days)', 'Work Type', 'Cost'];
+
+            // CSV rows
+            const rows = completed.map(w => {
+                const duration = w.start_date && w.end_date ? calculateDays(w.start_date, w.end_date) : '';
+                const cost = w.cost ? parseFloat(w.cost) : '';
+                return [
+                    w.well_name || 'Unknown',
+                    w.rig || '',
+                    w.start_date ? new Date(w.start_date).toLocaleDateString() : '',
+                    w.end_date ? new Date(w.end_date).toLocaleDateString() : '',
+                    duration,
+                    w.work_type || '',
+                    cost
+                ];
+            });
+
+            // Build CSV content
+            let csvContent = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csvContent += row.map(cell => {
+                    // Escape quotes and wrap in quotes if contains comma
+                    const str = String(cell);
+                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return '"' + str.replace(/"/g, '""') + '"';
+                    }
+                    return str;
+                }).join(',') + '\n';
+            });
+
+            // Create download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `completed_workovers_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function renderProductionTable() {
